@@ -253,3 +253,5 @@ Shows stored database queries, sorting and filtering options, purges, and CSV do
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
+Contact: pravallikabugata@gmail.com
+
