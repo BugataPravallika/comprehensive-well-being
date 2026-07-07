@@ -1,0 +1,695 @@
+{% extends 'base.html' %}
+
+{% block title %}Human Development Index (HDI) Predictor Dashboard{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <!-- Hero Section -->
+    <div class="row align-items-center mb-5">
+        <div class="col-lg-7">
+            <h1 class="display-4 fw-bold mb-3"><span class="text-gradient">Predicting Global Human Well-Being</span></h1>
+            <p class="lead text-secondary">
+                The Human Development Index (HDI) is a summary measure of average achievement in key dimensions of human development: a long and healthy life, being knowledgeable, and having a decent standard of living.
+            </p>
+            <p class="text-secondary">
+                This ML-powered prediction dashboard uses a <strong>Linear Regression</strong> model to predict the HDI score of a country based on major socioeconomic indicators. Enter indicators manually, auto-fill from country records, or run side-by-side comparative analyses.
+            </p>
+            <div class="d-flex gap-3 mt-4">
+                <a href="{{ url_for('history') }}" class="btn btn-outline-light btn-lg px-4 py-2">
+                    <i class="fa-solid fa-clock-history me-2"></i> View Logs History
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-5 mt-5 mt-lg-0 text-center">
+            <div class="p-4 glass-card border border-glass rounded-4 position-relative pulse-glow">
+                <div class="d-flex justify-content-around mb-3">
+                    <div class="text-center">
+                        <i class="fa-solid fa-heart-pulse text-danger fs-3 mb-2"></i>
+                        <p class="small text-secondary mb-0">Health</p>
+                        <span class="fw-bold">Life Expectancy</span>
+                    </div>
+                    <div class="text-center">
+                        <i class="fa-solid fa-graduation-cap text-info fs-3 mb-2"></i>
+                        <p class="small text-secondary mb-0">Education</p>
+                        <span class="fw-bold">Years of Schooling</span>
+                    </div>
+                </div>
+                <div class="border-top border-glass pt-3">
+                    <i class="fa-solid fa-coins text-warning fs-3 mb-2"></i>
+                    <p class="small text-secondary mb-0">Living Standard</p>
+                    <span class="fw-bold">GNI per Capita (PPP)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Tabbed Interface -->
+    <div class="glass-card p-4 rounded-4 shadow-lg mb-5">
+        <ul class="nav nav-pills nav-fill mb-4 border-bottom border-glass pb-3 gap-2" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active py-3 fw-bold" id="predict-tab" data-bs-toggle="tab" data-bs-target="#predict-pane" type="button" role="tab" aria-controls="predict-pane" aria-selected="true">
+                    <i class="fa-solid fa-calculator me-2"></i>Predict HDI
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link py-3 fw-bold" id="compare-tab" data-bs-toggle="tab" data-bs-target="#compare-pane" type="button" role="tab" aria-controls="compare-pane" aria-selected="false">
+                    <i class="fa-solid fa-scale-balanced me-2"></i>Country Comparison
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link py-3 fw-bold" id="plots-tab" data-bs-toggle="tab" data-bs-target="#plots-pane" type="button" role="tab" aria-controls="plots-pane" aria-selected="false">
+                    <i class="fa-solid fa-image me-2"></i>EDA Plots
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link py-3 fw-bold" id="stats-tab" data-bs-toggle="tab" data-bs-target="#stats-pane" type="button" role="tab" aria-controls="stats-pane" aria-selected="false">
+                    <i class="fa-solid fa-table-list me-2"></i>Dataset Statistics
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="dashboardTabsContent">
+            
+            <!-- Predict HDI Tab Pane -->
+            <div class="tab-pane fade show active" id="predict-pane" role="tabpanel" aria-labelledby="predict-tab" tabindex="0">
+                <div class="mx-auto" style="max-width: 750px;">
+                    <div class="text-center mb-4">
+                        <span class="badge bg-indigo-500 bg-opacity-25 text-indigo-300 px-3 py-2 rounded-pill mb-2">HDI Predictor Machine Learning</span>
+                        <h2 class="fw-bold">Calculate Country HDI</h2>
+                        <p class="text-secondary">Input national indicators manually or select a country to auto-fill its recorded data.</p>
+                    </div>
+
+                    {% if error_msg %}
+                    <div class="alert alert-danger d-flex align-items-center mb-4 border-0" role="alert" style="background-color: rgba(239, 68, 68, 0.15); color: #f87171;">
+                        <i class="fa-solid fa-triangle-exclamation me-3 fs-4"></i>
+                        <div>
+                            <strong>Validation Error:</strong> {{ error_msg }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Auto-Fill Dropdown -->
+                    <div class="mb-5 p-4 rounded bg-dark bg-opacity-40 border border-glass">
+                        <label for="country_selector" class="form-label-custom">
+                            <i class="fa-solid fa-earth-americas text-indigo-300 me-2"></i>Select Country to Auto-fill Data
+                        </label>
+                        <select id="country_selector" class="form-select form-control-custom">
+                            <option value="">-- Choose a country to pre-populate inputs --</option>
+                            {% for country in dataset_stats.countries_list %}
+                            <option value="{{ country }}">{{ country }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text text-secondary small">Populates recorded UNDP indicators which you can customize before predicting.</div>
+                    </div>
+
+                    <!-- Input Form -->
+                    <form action="{{ url_for('predict') }}" method="POST" class="needs-validation" novalidate>
+                        <div class="row g-4">
+                            <!-- Life Expectancy -->
+                            <div class="col-md-6">
+                                <label for="Life_Expectancy" class="form-label-custom">
+                                    <i class="fa-solid fa-heart-pulse text-danger me-2"></i>Life Expectancy at Birth (years)
+                                </label>
+                                <input type="number" step="0.01" class="form-control form-control-custom" id="Life_Expectancy" name="Life_Expectancy" 
+                                       placeholder="e.g., 72.5" min="45.0" max="86.0" required value="{{ form_data.Life_Expectancy if form_data else '' }}">
+                                <div class="form-text text-secondary small">Valid Range: 45.0 to 86.0 years.</div>
+                                <div class="invalid-feedback">Please enter a value between 45.0 and 86.0.</div>
+                            </div>
+
+                            <!-- Expected Years of Schooling -->
+                            <div class="col-md-6">
+                                <label for="Expected_Years_Schooling" class="form-label-custom">
+                                    <i class="fa-solid fa-graduation-cap text-info me-2"></i>Expected Years of Schooling
+                                </label>
+                                <input type="number" step="0.01" class="form-control form-control-custom" id="Expected_Years_Schooling" name="Expected_Years_Schooling" 
+                                       placeholder="e.g., 12.8" min="4.0" max="21.0" required value="{{ form_data.Expected_Years_Schooling if form_data else '' }}">
+                                <div class="form-text text-secondary small">Valid Range: 4.0 to 21.0 years.</div>
+                                <div id="expected_schooling_feedback" class="invalid-feedback">Please enter a value between 4.0 and 21.0.</div>
+                            </div>
+
+                            <!-- Mean Years of Schooling -->
+                            <div class="col-md-6">
+                                <label for="Mean_Years_Schooling" class="form-label-custom">
+                                    <i class="fa-solid fa-book-open text-success me-2"></i>Mean Years of Schooling
+                                </label>
+                                <input type="number" step="0.01" class="form-control form-control-custom" id="Mean_Years_Schooling" name="Mean_Years_Schooling" 
+                                        placeholder="e.g., 8.4" min="1.0" max="15.0" required value="{{ form_data.Mean_Years_Schooling if form_data else '' }}">
+                                <div class="form-text text-secondary small">Valid Range: 1.0 to 15.0 years.</div>
+                                <div id="mean_schooling_feedback" class="invalid-feedback">Please enter a value between 1.0 and 15.0.</div>
+                            </div>
+
+                            <!-- GNI per Capita -->
+                            <div class="col-md-6">
+                                <label for="GNI_per_Capita" class="form-label-custom">
+                                    <i class="fa-solid fa-coins text-warning me-2"></i>GNI per Capita (Constant 2017 PPP $)
+                                </label>
+                                <input type="number" step="0.01" class="form-control form-control-custom" id="GNI_per_Capita" name="GNI_per_Capita" 
+                                       placeholder="e.g., 14200" min="400.0" max="110000.0" required value="{{ form_data.GNI_per_Capita if form_data else '' }}">
+                                <div class="form-text text-secondary small">Valid Range: $400.0 to $110,000.0.</div>
+                                <div class="invalid-feedback">Please enter a value between 400.0 and 110,000.0.</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 text-center">
+                            <button type="submit" class="btn btn-premium btn-lg w-100 py-3">
+                                <i class="fa-solid fa-calculator me-2"></i>Run Machine Learning Prediction
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Country Comparison Tab Pane -->
+            <div class="tab-pane fade" id="compare-pane" role="tabpanel" aria-labelledby="compare-tab" tabindex="0">
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold"><i class="fa-solid fa-scale-balanced text-indigo-400 me-2"></i>Country Comparison Portal</h2>
+                    <p class="text-secondary">Compare socioeconomic indicators and development profiles of two nations side-by-side.</p>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label for="compare_a" class="form-label-custom">Select Country A</label>
+                        <select id="compare_a" class="form-select form-control-custom">
+                            <option value="">-- Choose Country A --</option>
+                            {% for country in dataset_stats.countries_list %}
+                            <option value="{{ country }}">{{ country }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="compare_b" class="form-label-custom">Select Country B</label>
+                        <select id="compare_b" class="form-select form-control-custom">
+                            <option value="">-- Choose Country B --</option>
+                            {% for country in dataset_stats.countries_list %}
+                            <option value="{{ country }}">{{ country }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 text-center mt-3">
+                        <button type="button" id="compare_btn" class="btn btn-premium px-5 py-3">
+                            <i class="fa-solid fa-equals me-2"></i>Run Comparative Analysis
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Comparison Report Display (Initially Hidden) -->
+                <div id="comparison_report" class="d-none pt-4 border-top border-glass">
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <div class="glass-card p-4 h-100">
+                                <h3 class="h5 fw-bold mb-3"><i class="fa-solid fa-table text-indigo-300 me-2"></i>Metrics Comparison Table</h3>
+                                <div class="table-responsive">
+                                    <table class="table table-dark table-striped table-hover align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Indicator</th>
+                                                <th id="lbl_country_a" class="text-info">Country A</th>
+                                                <th id="lbl_country_b" class="text-warning">Country B</th>
+                                                <th>Delta (A - B)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>HDI Index</strong></td>
+                                                <td id="val_hdi_a">-</td>
+                                                <td id="val_hdi_b">-</td>
+                                                <td id="val_hdi_delta" class="fw-bold">-</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Life Expectancy (yrs)</td>
+                                                <td id="val_le_a">-</td>
+                                                <td id="val_le_b">-</td>
+                                                <td id="val_le_delta">-</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Expected Schooling (yrs)</td>
+                                                <td id="val_eys_a">-</td>
+                                                <td id="val_eys_b">-</td>
+                                                <td id="val_eys_delta">-</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Mean Schooling (yrs)</td>
+                                                <td id="val_mys_a">-</td>
+                                                <td id="val_mys_b">-</td>
+                                                <td id="val_mys_delta">-</td>
+                                            </tr>
+                                            <tr>
+                                                <td>GNI per Capita ($)</td>
+                                                <td id="val_gni_a">-</td>
+                                                <td id="val_gni_b">-</td>
+                                                <td id="val_gni_delta">-</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6">
+                            <div class="glass-card p-4 mb-4">
+                                <h3 class="h5 fw-bold mb-3"><i class="fa-solid fa-chart-bar text-indigo-300 me-2"></i>Development Profile Chart</h3>
+                                <div style="height: 250px; position: relative;">
+                                    <canvas id="yearsComparisonChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="glass-card p-4">
+                                <h3 class="h5 fw-bold mb-3"><i class="fa-solid fa-money-bill-trend-up text-indigo-300 me-2"></i>Income Index comparison</h3>
+                                <div style="height: 120px; position: relative;">
+                                    <canvas id="incomeComparisonChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EDA Plots Tab Pane -->
+            <div class="tab-pane fade" id="plots-pane" role="tabpanel" aria-labelledby="plots-tab" tabindex="0">
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold"><i class="fa-solid fa-image text-indigo-400 me-2"></i>Exploratory Data Analysis Plots</h2>
+                    <p class="text-secondary">Explore linear patterns, correlations, and distributions across global developmental tiers.</p>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="glass-card p-4 h-100">
+                            <h3 class="h5 fw-bold mb-2"><i class="fa-solid fa-circle-nodes text-primary me-2"></i>Correlation Heatmap</h3>
+                            <p class="text-secondary small">Linear correlation coefficients. Schooling and life expectancy have the strongest positive linear scores.</p>
+                            <div class="bg-dark rounded p-2 border border-glass text-center">
+                                <img src="{{ url_for('static', filename='images/correlation_heatmap.png') }}" class="img-fluid rounded" alt="Correlation Heatmap">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="glass-card p-4 h-100">
+                            <h3 class="h5 fw-bold mb-2"><i class="fa-solid fa-chart-simple text-success me-2"></i>Boxplots by Development Tier</h3>
+                            <p class="text-secondary small">Displays the range separation of HDI values for Low, Medium, High, and Very High classifications.</p>
+                            <div class="bg-dark rounded p-2 border border-glass text-center">
+                                <img src="{{ url_for('static', filename='images/boxplots.png') }}" class="img-fluid rounded" alt="HDI Tiers Boxplot">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="glass-card p-4">
+                            <h3 class="h5 fw-bold mb-2"><i class="fa-solid fa-chart-line text-danger me-2"></i>Scatter Plots vs Target (HDI)</h3>
+                            <p class="text-secondary small">Regression fit lines showing indicators vs HDI. Note GNI per capita uses log scaling.</p>
+                            <div class="bg-dark rounded p-2 border border-glass text-center">
+                                <img src="{{ url_for('static', filename='images/scatter_plots.png') }}" class="img-fluid rounded" alt="Scatter Plots" style="max-height: 480px; object-fit: contain; width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="glass-card p-4 mb-4">
+                            <h3 class="h5 fw-bold mb-2"><i class="fa-solid fa-table-cells text-warning me-2"></i>Indicator Feature Distributions</h3>
+                            <p class="text-secondary small">Histograms overlaid with KDE distribution curves showing variance and range skewness.</p>
+                            <div class="bg-dark rounded p-2 border border-glass text-center">
+                                <img src="{{ url_for('static', filename='images/distribution_plots.png') }}" class="img-fluid rounded" alt="Distribution Plots" style="max-height: 480px; object-fit: contain; width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="glass-card p-4">
+                            <h3 class="h5 fw-bold mb-2"><i class="fa-solid fa-circle-nodes text-info me-2"></i>Pairwise Relationships (Pairplot)</h3>
+                            <p class="text-secondary small">Pairwise relationships and distributions of all variables categorized by development tier.</p>
+                            <div class="bg-dark rounded p-2 border border-glass text-center">
+                                <img src="{{ url_for('static', filename='images/pairplots.png') }}" class="img-fluid rounded" alt="Pair Plots" style="max-height: 480px; object-fit: contain; width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dataset Statistics Tab Pane -->
+            <div class="tab-pane fade" id="stats-pane" role="tabpanel" aria-labelledby="stats-tab" tabindex="0">
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold"><i class="fa-solid fa-table-list text-indigo-400 me-2"></i>Descriptive Dataset Statistics</h2>
+                    <p class="text-secondary">Summary statistics and metrics overview derived directly from the global HDI dataset.</p>
+                </div>
+                
+                <!-- Dataset Overview Cards -->
+                <div class="row g-4 mb-4 text-center">
+                    <div class="col-md-4">
+                        <div class="p-3 bg-dark bg-opacity-40 border border-glass rounded">
+                            <h4 class="small text-secondary mb-1">TOTAL COUNTRIES RECORDED</h4>
+                            <span class="fs-3 fw-bold text-white">{{ dataset_stats.shape[0] if dataset_stats else '121' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-dark bg-opacity-40 border border-glass rounded">
+                            <h4 class="small text-secondary mb-1">TOTAL COLUMNS (FEATURES)</h4>
+                            <span class="fs-3 fw-bold text-white">{{ dataset_stats.shape[1] if dataset_stats else '7' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="p-3 bg-dark bg-opacity-40 border border-glass rounded">
+                            <h4 class="small text-secondary mb-1">MISSING VALUES DETECTED</h4>
+                            <span class="fs-3 fw-bold text-success">0 (Clean)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <!-- Missing Values Card -->
+                    <div class="col-md-5">
+                        <div class="glass-card p-4 h-100">
+                            <h3 class="h5 fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>Missing Values Summary</h3>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-striped table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>Column / Feature</th>
+                                            <th>Missing Count</th>
+                                            <th>Percentage</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if dataset_stats and dataset_stats.missing_records %}
+                                            {% for r in dataset_stats.missing_records %}
+                                            <tr>
+                                                <td><code>{{ r.Column }}</code></td>
+                                                <td>{{ r.MissingCount }}</td>
+                                                <td>
+                                                    {% if r.MissingCount == 0 %}
+                                                        <span class="badge bg-success bg-opacity-20 text-success">0.0%</span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger bg-opacity-20 text-danger">{{ r.Percentage }}%</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted">No records found.</td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Correlation Matrix Card -->
+                    <div class="col-md-7">
+                        <div class="glass-card p-4 h-100">
+                            <h3 class="h5 fw-bold mb-3"><i class="fa-solid fa-calculator text-primary me-2"></i>Correlation Matrix (Pearson)</h3>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-striped table-hover align-middle mb-0" style="font-size: 0.85rem;">
+                                    <thead>
+                                        <tr>
+                                            <th>Feature</th>
+                                            <th style="font-size: 0.75rem;">Life Exp</th>
+                                            <th style="font-size: 0.75rem;">Exp School</th>
+                                            <th style="font-size: 0.75rem;">Mean School</th>
+                                            <th style="font-size: 0.75rem;">GNI</th>
+                                            <th style="font-size: 0.75rem;">HDI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if dataset_stats and dataset_stats.corr_matrix %}
+                                            {% for r in dataset_stats.corr_matrix %}
+                                            <tr>
+                                                <td><strong>{{ r.Feature | replace('_', ' ') }}</strong></td>
+                                                <td>{{ "%.4f"|format(r.Life_Expectancy) }}</td>
+                                                <td>{{ "%.4f"|format(r.Expected_Years_Schooling) }}</td>
+                                                <td>{{ "%.4f"|format(r.Mean_Years_Schooling) }}</td>
+                                                <td>{{ "%.4f"|format(r.GNI_per_Capita) }}</td>
+                                                <td>{{ "%.4f"|format(r.HDI) }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">No correlation data records loaded.</td>
+                                            </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Table -->
+                <div class="glass-card p-4 mb-4">
+                    <h3 class="h5 fw-bold mb-3"><i class="fa-solid fa-calculator text-primary me-2"></i>Numeric Feature Statistics Breakdown</h3>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-striped table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Life Expectancy (yrs)</th>
+                                    <th>Expected Schooling (yrs)</th>
+                                    <th>Mean Schooling (yrs)</th>
+                                    <th>GNI per Capita ($)</th>
+                                    <th>HDI Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if dataset_stats and dataset_stats.stats_records %}
+                                    {% for r in dataset_stats.stats_records %}
+                                    <tr>
+                                        <td><strong>{{ r.Metric | capitalize }}</strong></td>
+                                        <td>{{ r.Life_Expectancy }}</td>
+                                        <td>{{ r.Expected_Years_Schooling }}</td>
+                                        <td>{{ r.Mean_Years_Schooling }}</td>
+                                        <td>${{ "{:,.2f}".format(r.GNI_per_Capita) }}</td>
+                                        <td>{{ r.HDI }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">No statistics statistics records loaded.</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Country Autofill & Comparison Javascript Block -->
+<script>
+    // Country profiles data passed from Flask
+    const countryData = {{ countries_json | safe }};
+
+    // Auto-fill Selector Handler
+    document.getElementById("country_selector").addEventListener("change", function() {
+        const country = this.value;
+        if (country && countryData[country]) {
+            const data = countryData[country];
+            document.getElementById("Life_Expectancy").value = data.Life_Expectancy;
+            document.getElementById("Expected_Years_Schooling").value = data.Expected_Years_Schooling;
+            document.getElementById("Mean_Years_Schooling").value = data.Mean_Years_Schooling;
+            document.getElementById("GNI_per_Capita").value = data.GNI_per_Capita;
+        }
+    });
+
+    // Chart.js instances placeholder
+    let yearsChartInstance = null;
+    let incomeChartInstance = null;
+
+    // Comparison click handler
+    document.getElementById("compare_btn").addEventListener("click", function() {
+        const countryA = document.getElementById("compare_a").value;
+        const countryB = document.getElementById("compare_b").value;
+
+        if (!countryA || !countryB) {
+            alert("Please select both Country A and Country B to compare.");
+            return;
+        }
+
+        if (countryA === countryB) {
+            alert("Please select two different countries for comparison.");
+            return;
+        }
+
+        const dataA = countryData[countryA];
+        const dataB = countryData[countryB];
+
+        if (!dataA || !dataB) {
+            alert("Error loading country data records.");
+            return;
+        }
+
+        // Show comparison panel
+        document.getElementById("lbl_country_a").innerText = countryA;
+        document.getElementById("lbl_country_b").innerText = countryB;
+        document.getElementById("comparison_report").classList.remove("d-none");
+
+        // Helper to compute delta
+        const setCell = (cellId, valA, valB, isCurrency=false) => {
+            const el = document.getElementById(cellId);
+            const delta = valA - valB;
+            
+            let prettyA = isCurrency ? `$${valA.toLocaleString()}` : valA.toFixed(2);
+            let prettyB = isCurrency ? `$${valB.toLocaleString()}` : valB.toFixed(2);
+            
+            document.getElementById(`${cellId}_a`).innerText = prettyA;
+            document.getElementById(`${cellId}_b`).innerText = prettyB;
+
+            let deltaPretty = isCurrency ? `$${Math.abs(delta).toLocaleString()}` : Math.abs(delta).toFixed(2);
+            if (delta > 0) {
+                el.innerHTML = `<span class="text-success"><i class="fa-solid fa-circle-chevron-up me-1"></i>+${deltaPretty}</span>`;
+            } else if (delta < 0) {
+                el.innerHTML = `<span class="text-danger"><i class="fa-solid fa-circle-chevron-down me-1"></i>-${deltaPretty}</span>`;
+            } else {
+                el.innerHTML = `<span class="text-muted"><i class="fa-solid fa-circle-minus me-1"></i>0.00</span>`;
+            }
+        };
+
+        // Populate Table cells
+        setCell("val_hdi", dataA.HDI, dataB.HDI);
+        setCell("val_le", dataA.Life_Expectancy, dataB.Life_Expectancy);
+        setCell("val_eys", dataA.Expected_Years_Schooling, dataB.Expected_Years_Schooling);
+        setCell("val_mys", dataA.Mean_Years_Schooling, dataB.Mean_Years_Schooling);
+        setCell("val_gni", dataA.GNI_per_Capita, dataB.GNI_per_Capita, true);
+
+        // Render comparative bar charts
+        renderCharts(countryA, countryB, dataA, dataB);
+        
+        // Smooth scroll to comparison report
+        document.getElementById("comparison_report").scrollIntoView({ behavior: 'smooth' });
+    });
+
+    function renderCharts(countryA, countryB, dataA, dataB) {
+        // Destroy existing instances if any
+        if (yearsChartInstance) yearsChartInstance.destroy();
+        if (incomeChartInstance) incomeChartInstance.destroy();
+
+        // 1. Years Indicators Chart
+        const ctxYears = document.getElementById('yearsComparisonChart').getContext('2d');
+        yearsChartInstance = new Chart(ctxYears, {
+            type: 'bar',
+            data: {
+                labels: ['Life Expectancy (Scaled 1/5)', 'Expected Schooling (yrs)', 'Mean Schooling (yrs)', 'HDI Score (Scaled x20)'],
+                datasets: [
+                    {
+                        label: countryA,
+                        data: [dataA.Life_Expectancy / 5, dataA.Expected_Years_Schooling, dataA.Mean_Years_Schooling, dataA.HDI * 20],
+                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                        borderColor: 'rgb(99, 102, 241)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: countryB,
+                        data: [dataB.Life_Expectancy / 5, dataB.Expected_Years_Schooling, dataB.Mean_Years_Schooling, dataB.HDI * 20],
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                        borderColor: 'rgb(245, 158, 11)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8' } }
+                },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+
+        // 2. GNI Comparison Chart
+        const ctxIncome = document.getElementById('incomeComparisonChart').getContext('2d');
+        incomeChartInstance = new Chart(ctxIncome, {
+            type: 'bar',
+            data: {
+                labels: ['GNI per Capita (PPP $)'],
+                datasets: [
+                    {
+                        label: countryA,
+                        data: [dataA.GNI_per_Capita],
+                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                        borderColor: 'rgb(99, 102, 241)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: countryB,
+                        data: [dataB.GNI_per_Capita],
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                        borderColor: 'rgb(245, 158, 11)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+    }
+
+    // Bootstrap client-side form validation & smart validation
+    (function () {
+        'use strict'
+        
+        const expSchoolInput = document.getElementById("Expected_Years_Schooling");
+        const meanSchoolInput = document.getElementById("Mean_Years_Schooling");
+        const expFeedback = document.getElementById("expected_schooling_feedback");
+        const meanFeedback = document.getElementById("mean_schooling_feedback");
+
+        function checkSchoolingConstraints() {
+            if (!expSchoolInput || !meanSchoolInput) return;
+            
+            const expVal = parseFloat(expSchoolInput.value);
+            const meanVal = parseFloat(meanSchoolInput.value);
+
+            // Check if Mean exceeds Expected
+            if (!isNaN(expVal) && !isNaN(meanVal) && meanVal > expVal) {
+                meanSchoolInput.setCustomValidity("Mean schooling years cannot exceed expected schooling years.");
+                if (meanFeedback) {
+                    meanFeedback.innerText = "Mean schooling years cannot exceed Expected Schooling (" + expVal + " yrs).";
+                }
+            } else {
+                meanSchoolInput.setCustomValidity("");
+                if (meanFeedback) {
+                    meanFeedback.innerText = "Please enter a value between 1.0 and 15.0.";
+                }
+            }
+        }
+
+        // Run validation dynamically on input changes
+        if (expSchoolInput) {
+            expSchoolInput.addEventListener('input', checkSchoolingConstraints);
+        }
+        if (meanSchoolInput) {
+            meanSchoolInput.addEventListener('input', checkSchoolingConstraints);
+        }
+
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function (formElement) {
+                formElement.addEventListener('submit', function (event) {
+                    checkSchoolingConstraints();
+                    
+                    if (!formElement.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    formElement.classList.add('was-validated')
+                }, false)
+            })
+    })()
+</script>
+{% endblock %}

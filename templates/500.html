@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Internal Server Error (500){% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+    <div class="mx-auto glass-card p-5 rounded-4 shadow-lg" style="max-width: 600px;">
+        <i class="fa-solid fa-bug-slash text-danger display-1 mb-4"></i>
+        <h1 class="display-5 fw-bold mb-3">500 - Server Error</h1>
+        <p class="text-secondary mb-5">
+            An unexpected error occurred while processing your request. Our system logs have registered this event, and we are working to resolve it.
+        </p>
+        <a href="{{ url_for('home') }}" class="btn btn-premium btn-lg px-5 py-3">
+            <i class="fa-solid fa-house me-2"></i> Return to Home
+        </a>
+    </div>
+</div>
+{% endblock %}

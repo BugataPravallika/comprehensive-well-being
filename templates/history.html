@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Prediction Logs History{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <!-- Header Controls Card -->
+    <div class="glass-card p-5 rounded-4 shadow-lg mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div>
+                <span class="badge bg-indigo-500 bg-opacity-25 text-indigo-300 px-3 py-2 rounded-pill mb-2">Logs & Storage</span>
+                <h1 class="h2 fw-bold text-white mb-1"><i class="fa-solid fa-clock-history text-indigo-400 me-2"></i>Prediction Logs History</h1>
+                <p class="text-secondary mb-0">Review past queries, search logs, sort metrics, and download CSV reports.</p>
+            </div>
+            
+            <div class="d-flex gap-2">
+                {% if history %}
+                <a href="{{ url_for('download_history') }}" class="btn btn-outline-info py-2 px-3">
+                    <i class="fa-solid fa-file-csv me-2"></i>Export CSV
+                </a>
+                <form action="{{ url_for('clear_history') }}" method="POST" onsubmit="return confirm('Are you sure you want to permanently clear all prediction logs? This action cannot be undone.');">
+                    <button type="submit" class="btn btn-outline-danger py-2 px-3">
+                        <i class="fa-solid fa-trash-can me-2"></i>Clear Logs
+                    </button>
+                </form>
+                {% endif %}
+                <a href="{{ url_for('home') }}" class="btn btn-premium py-2 px-3">
+                    <i class="fa-solid fa-house me-2"></i>Home
+                </a>
+            </div>
+        </div>
+
+        <!-- Filter and Search Row -->
+        <form action="{{ url_for('history') }}" method="GET" class="row g-3 p-3 bg-dark bg-opacity-35 rounded border border-glass">
+            <div class="col-md-5">
+                <label for="search" class="form-label-custom mb-1">Filter by Development Category</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-dark border-glass text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" class="form-control form-control-custom" id="search" name="search" placeholder="e.g. Very High, High, Medium, Low" value="{{ search }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label for="sort" class="form-label-custom mb-1">Sort Metric</label>
+                <select id="sort" name="sort" class="form-select form-control-custom">
+                    <option value="timestamp" {% if sort == 'timestamp' %}selected{% endif %}>Query Date & Time</option>
+                    <option value="predicted_hdi" {% if sort == 'predicted_hdi' %}selected{% endif %}>Predicted HDI Score</option>
+                    <option value="life_expectancy" {% if sort == 'life_expectancy' %}selected{% endif %}>Life Expectancy</option>
+                    <option value="gni" {% if sort == 'gni' %}selected{% endif %}>GNI per Capita</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="order" class="form-label-custom mb-1">Order</label>
+                <select id="order" name="order" class="form-select form-control-custom">
+                    <option value="desc" {% if order == 'desc' %}selected{% endif %}>Descending</option>
+                    <option value="asc" {% if order == 'asc' %}selected{% endif %}>Ascending</option>
+                </select>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-premium w-100 py-2">
+                    <i class="fa-solid fa-filter"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- History Data Logs Table -->
+    <div class="glass-card p-4 rounded-4 shadow-lg">
+        {% if history %}
+        <div class="table-responsive">
+            <table class="table table-dark table-striped table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Life Expectancy</th>
+                        <th>Expected Schooling</th>
+                        <th>Mean Schooling</th>
+                        <th>GNI per Capita</th>
+                        <th>Predicted HDI</th>
+                        <th>Category Badge</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in history %}
+                    {% set tier_class = 'low' %}
+                    {% if 'Very High' in item.category %}{% set tier_class = 'very-high' %}
+                    {% elif 'High' in item.category %}{% set tier_class = 'high' %}
+                    {% elif 'Medium' in item.category %}{% set tier_class = 'medium' %}
+                    {% endif %}
+                    <tr>
+                        <td class="font-monospace text-secondary" style="font-size: 0.85rem;">{{ item.timestamp }}</td>
+                        <td>{{ item.life_expectancy }} yrs</td>
+                        <td>{{ item.expected_schooling }} yrs</td>
+                        <td>{{ item.mean_schooling }} yrs</td>
+                        <td>${{ "{:,.2f}".format(item.gni) }}</td>
+                        <td class="fw-bold text-white font-monospace">{{ "%.3f"|format(item.predicted_hdi) }}</td>
+                        <td>
+                            <span class="badge badge-{{ tier_class }} px-2 py-1 rounded-pill small">
+                                {{ item.category }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fa-solid fa-folder-open text-secondary display-3 mb-3"></i>
+            <h3 class="h5 fw-bold text-white">No Prediction Logs Found</h3>
+            <p class="text-secondary mx-auto" style="max-width: 400px;">There are no query entries in the database. Perform a prediction on the dashboard to populate logs history.</p>
+            <a href="{{ url_for('home') }}#predict-section" class="btn btn-premium px-4 py-2 mt-2">
+                <i class="fa-solid fa-wand-magic-sparkles me-2"></i>Predict HDI Now
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+
+{% block title %}Prediction Result{% endblock %}
+
+{% block content %}
+<!-- Calculate SVG Circle Stroke Dash Offset for the Gauge -->
+{# Circle radius is 90, Circumference is 2 * pi * r = 2 * 3.14159 * 90 = 565.48 #}
+{% set circumference = 565.48 %}
+{% set offset = circumference * (1.0 - hdi_value) %}
+
+<div class="container">
+    <div class="mx-auto" style="max-width: 850px;">
+        
+        <!-- Results Main Card -->
+        <div class="glass-card overflow-hidden rounded-4 shadow-lg mb-4 tier-{{ tier_class }}">
+            
+            <div class="p-5">
+                
+                <div class="row align-items-center">
+                    
+                    <!-- Gauge column -->
+                    <div class="col-md-5 text-center mb-4 mb-md-0">
+                        <div class="hdi-gauge-container">
+                            <svg width="220" height="220" class="gauge-svg">
+                                <circle class="gauge-bg" cx="110" cy="110" r="90" />
+                                <circle class="gauge-fill" cx="110" cy="110" r="90" 
+                                        stroke="var(--color-{{ tier_class }})" 
+                                        stroke-dasharray="{{ circumference }}" 
+                                        stroke-dashoffset="{{ offset }}" />
+                            </svg>
+                            <div class="hdi-gauge-value">
+                                <div class="hdi-val-text text-{{ tier_class }}" style="color: var(--color-{{ tier_class }});">{{ "%.3f"|format(hdi_value) }}</div>
+                                <div class="hdi-label">Predicted HDI</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Text Summary column -->
+                    <div class="col-md-7">
+                        <span class="badge badge-{{ tier_class }} px-3 py-2 rounded-pill fw-semibold mb-3 fs-6">
+                            <i class="{{ tier_icon }} me-2"></i>{{ tier_name }}
+                        </span>
+                        
+                        <h2 class="fw-bold mb-3">Prediction Summary</h2>
+                        
+                        <p class="text-secondary mb-4">
+                            Based on the socioeconomic indicators provided, the Linear Regression model predicts an overall Human Development Index of <strong class="text-white">{{ "%.3f"|format(hdi_value) }}</strong>. This value places the country in the <strong style="color: var(--color-{{ tier_class }});">{{ tier_name }}</strong> category.
+                        </p>
+                        
+                        <div class="p-3 bg-dark bg-opacity-50 rounded border border-glass">
+                            <div class="d-flex align-items-center">
+                                <i class="fa-solid fa-circle-info text-info fs-4 me-3"></i>
+                                <div class="small text-secondary">
+                                    <strong>Linear Regression Fit:</strong> The model has mapped these features according to historical global variance, showing a high coefficient of determination (\(R^2\)).
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Policy & Development Recommendations -->
+        <div class="glass-card p-5 rounded-4 shadow-lg mb-4">
+            <h3 class="h4 fw-bold mb-4"><i class="fa-solid fa-lightbulb text-indigo-400 me-2"></i>Development & Policy Recommendations</h3>
+            <p class="text-secondary mb-4">
+                To improve or sustain the quality of life and human development in this country, our system recommends prioritizing the following socioeconomic interventions:
+            </p>
+            <div class="row g-4">
+                {% for rec in recommendations %}
+                <div class="col-md-6">
+                    <div class="p-3 rounded h-100 bg-dark bg-opacity-30 border border-glass d-flex align-items-start">
+                        <div class="me-3 p-2 rounded bg-indigo-500 bg-opacity-10 text-indigo-300">
+                            <i class="fa-solid {{ rec.icon }} fs-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="h6 fw-bold text-white mb-2">{{ rec.title }}</h4>
+                            <p class="small text-secondary mb-0">{{ rec.desc }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Inputs Breakdown & Feature Profile -->
+        <div class="glass-card p-5 rounded-4 shadow-lg mb-4">
+            <h3 class="h4 fw-bold mb-4"><i class="fa-solid fa-sliders text-indigo-400 me-2"></i>Country Indicator Profile</h3>
+            
+            <div class="row g-4">
+                <!-- Life Expectancy Indicator Card -->
+                <div class="col-md-6">
+                    <div class="p-3 rounded bg-dark bg-opacity-30 border border-glass">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-secondary fw-semibold">
+                                <i class="fa-solid fa-heart-pulse text-danger me-2"></i>Life Expectancy
+                            </span>
+                            <span class="fw-bold text-white">{{ inputs.Life_Expectancy }} years</span>
+                        </div>
+                        <!-- Progress bar representation -->
+                        {% set le_pct = ((inputs.Life_Expectancy - 20) / (85 - 20) * 100)|round %}
+                        <div class="progress bg-secondary bg-opacity-25" style="height: 6px;">
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ le_pct }}%" aria-valuenow="{{ le_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mt-2" style="font-size: 0.75rem;">
+                            <span>Min (20 yr)</span>
+                            <span>Max (85 yr)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Expected Schooling Indicator Card -->
+                <div class="col-md-6">
+                    <div class="p-3 rounded bg-dark bg-opacity-30 border border-glass">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-secondary fw-semibold">
+                                <i class="fa-solid fa-graduation-cap text-info me-2"></i>Expected Schooling
+                            </span>
+                            <span class="fw-bold text-white">{{ inputs.Expected_Years_Schooling }} years</span>
+                        </div>
+                        {% set eys_pct = (inputs.Expected_Years_Schooling / 18 * 100)|round %}
+                        <div class="progress bg-secondary bg-opacity-25" style="height: 6px;">
+                            <div class="progress-bar bg-info" role="progressbar" style="width: {{ eys_pct }}%" aria-valuenow="{{ eys_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mt-2" style="font-size: 0.75rem;">
+                            <span>Min (0 yr)</span>
+                            <span>Max (18 yr)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mean Schooling Indicator Card -->
+                <div class="col-md-6">
+                    <div class="p-3 rounded bg-dark bg-opacity-30 border border-glass">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-secondary fw-semibold">
+                                <i class="fa-solid fa-book-open text-success me-2"></i>Mean Schooling
+                            </span>
+                            <span class="fw-bold text-white">{{ inputs.Mean_Years_Schooling }} years</span>
+                        </div>
+                        {% set mys_pct = (inputs.Mean_Years_Schooling / 15 * 100)|round %}
+                        <div class="progress bg-secondary bg-opacity-25" style="height: 6px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ mys_pct }}%" aria-valuenow="{{ mys_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mt-2" style="font-size: 0.75rem;">
+                            <span>Min (0 yr)</span>
+                            <span>Max (15 yr)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GNI per Capita Indicator Card -->
+                <div class="col-md-6">
+                    <div class="p-3 rounded bg-dark bg-opacity-30 border border-glass">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-secondary fw-semibold">
+                                <i class="fa-solid fa-coins text-warning me-2"></i>GNI per Capita (PPP)
+                            </span>
+                            <span class="fw-bold text-white">${{ "{:,.2f}".format(inputs.GNI_per_Capita) }}</span>
+                        </div>
+                        {# Standard logarithmic index representation #}
+                        {% set gni_pct = ((inputs.GNI_per_Capita|log_10 - 2) / (5.045 - 2) * 100)|round %}
+                        <div class="progress bg-secondary bg-opacity-25" style="height: 6px;">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ gni_pct }}%" aria-valuenow="{{ gni_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-muted mt-2" style="font-size: 0.75rem;">
+                            <span>Min ($100)</span>
+                            <span>Max ($75,000+)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Feature Importance Breakdown -->
+        <div class="glass-card p-5 rounded-4 shadow-lg mb-4">
+            <h3 class="h4 fw-bold mb-4"><i class="fa-solid fa-chart-bar text-indigo-400 me-2"></i>Feature Importance Breakdown (ML Weights)</h3>
+            <p class="text-secondary mb-4">
+                Our Linear Regression model weights determine how much each socioeconomic indicator contributes to the final predicted Human Development Index. Below is the relative contribution breakdown based on absolute model coefficients:
+            </p>
+            <div class="row g-4">
+                {% for item in feature_importance %}
+                <div class="col-md-6">
+                    <div class="p-3 rounded bg-dark bg-opacity-30 border border-glass h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold text-white">{{ item.feature_pretty }}</span>
+                            <span class="badge bg-indigo-500 bg-opacity-25 text-indigo-300 font-monospace">{{ item.percentage }}% Importance</span>
+                        </div>
+                        <div class="progress bg-secondary bg-opacity-25" style="height: 6px;">
+                            <div class="progress-bar bg-indigo-500" role="progressbar" style="width: {{ item.percentage }}%" aria-valuenow="{{ item.percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between small text-secondary mt-2" style="font-size: 0.8rem;">
+                            <span>Coefficient Weight: <code class="text-indigo-300">{{ "%.5f"|format(item.coefficient) }}</code></span>
+                            <span>
+                                {% if item.coefficient > 0 %}
+                                <span class="text-success"><i class="fa-solid fa-circle-plus me-1"></i>Positive Impact</span>
+                                {% else %}
+                                <span class="text-danger"><i class="fa-solid fa-circle-minus me-1"></i>Negative Impact</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <p class="small text-secondary mt-3 mb-0 pt-2 border-top border-glass" style="font-size: 0.825rem;">
+                            {{ item.explanation }}
+                        </p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- What-If Simulation Dashboard Panel -->
+        <div class="glass-card p-5 rounded-4 shadow-lg mb-4 border border-indigo-500 border-opacity-30 pulse-glow">
+            <h3 class="h4 fw-bold mb-4 text-gradient"><i class="fa-solid fa-sliders text-indigo-400 me-2"></i>What-If Scenario Simulator</h3>
+            <p class="text-secondary mb-4">
+                Adjust the sliders below to simulate how enhancements in health, education, or national income would shift the predicted Human Development Index score and developmental tier.
+            </p>
+            <div class="row g-4">
+                <!-- Sliders Column -->
+                <div class="col-lg-7">
+                    <div class="d-flex flex-column gap-4">
+                        <!-- LE Slider -->
+                        <div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <label for="sim_le" class="form-label-custom mb-0"><i class="fa-solid fa-heart-pulse text-danger me-2"></i>Life Expectancy</label>
+                                <span class="fw-bold text-white"><span id="lbl_sim_le">{{ inputs.Life_Expectancy }}</span> yrs</span>
+                            </div>
+                            <input type="range" class="form-range" id="sim_le" min="45.0" max="86.0" step="0.1" value="{{ inputs.Life_Expectancy }}">
+                        </div>
+
+                        <!-- EYS Slider -->
+                        <div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <label for="sim_eys" class="form-label-custom mb-0"><i class="fa-solid fa-graduation-cap text-info me-2"></i>Expected Schooling</label>
+                                <span class="fw-bold text-white"><span id="lbl_sim_eys">{{ inputs.Expected_Years_Schooling }}</span> yrs</span>
+                            </div>
+                            <input type="range" class="form-range" id="sim_eys" min="4.0" max="21.0" step="0.1" value="{{ inputs.Expected_Years_Schooling }}">
+                        </div>
+
+                        <!-- MYS Slider -->
+                        <div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <label for="sim_mys" class="form-label-custom mb-0"><i class="fa-solid fa-book-open text-success me-2"></i>Mean Schooling</label>
+                                <span class="fw-bold text-white"><span id="lbl_sim_mys">{{ inputs.Mean_Years_Schooling }}</span> yrs</span>
+                            </div>
+                            <input type="range" class="form-range" id="sim_mys" min="1.0" max="15.0" step="0.1" value="{{ inputs.Mean_Years_Schooling }}">
+                        </div>
+
+                        <!-- GNI Slider -->
+                        <div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <label for="sim_gni" class="form-label-custom mb-0"><i class="fa-solid fa-coins text-warning me-2"></i>GNI per Capita</label>
+                                <span class="fw-bold text-white">$<span id="lbl_sim_gni">{{ inputs.GNI_per_Capita | round | int }}</span></span>
+                            </div>
+                            <input type="range" class="form-range" id="sim_gni" min="400" max="110000" step="100" value="{{ inputs.GNI_per_Capita | round | int }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulation Results Output Column -->
+                <div class="col-lg-5 text-center d-flex flex-column justify-content-center border-start border-glass ps-lg-4 mt-4 mt-lg-0">
+                    <div class="p-4 bg-dark bg-opacity-40 rounded border border-glass">
+                        <h4 class="small text-secondary mb-2">SIMULATED HDI SCORE</h4>
+                        <div id="sim_hdi_val" class="display-5 fw-bold text-white mb-2">{{ "%.3f"|format(hdi_value) }}</div>
+                        
+                        <div class="mb-3">
+                            <span id="sim_tier_badge" class="badge badge-{{ tier_class }} px-3 py-2 rounded-pill font-monospace">
+                                {{ tier_name }} Tier
+                            </span>
+                        </div>
+                        
+                        <div class="border-top border-glass pt-3 mt-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small text-secondary">Original predicted HDI:</span>
+                                <span class="small font-monospace text-white">{{ "%.3f"|format(hdi_value) }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small text-secondary">Simulation Delta:</span>
+                                <span id="sim_delta_val" class="small font-monospace text-muted">0.000</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 text-start small text-secondary">
+                        <strong>Interpretation:</strong> <span id="sim_interpretation">Inputs are set to original prediction values. Drag the sliders to run scenarios.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-5 d-flex flex-column flex-sm-row justify-content-center gap-3">
+            <a href="{{ url_for('download_report', le=inputs.Life_Expectancy, eys=inputs.Expected_Years_Schooling, mys=inputs.Mean_Years_Schooling, gni=inputs.GNI_per_Capita) }}" class="btn btn-danger px-5 py-3">
+                <i class="fa-solid fa-file-pdf me-2"></i> Download PDF Report
+            </a>
+            <a href="{{ url_for('home') }}#predict-section" class="btn btn-premium px-5 py-3">
+                <i class="fa-solid fa-rotate-left me-2"></i> Predict Another Country
+            </a>
+            <a href="{{ url_for('home') }}" class="btn btn-outline-light px-5 py-3">
+                <i class="fa-solid fa-house me-2"></i> Return to Dashboard Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const simMeta = {{ simulator_meta | tojson }};
+    const originalHdi = {{ hdi_value }};
+    
+    // Elements
+    const elLe = document.getElementById("sim_le");
+    const elEys = document.getElementById("sim_eys");
+    const elMys = document.getElementById("sim_mys");
+    const elGni = document.getElementById("sim_gni");
+
+    const lblLe = document.getElementById("lbl_sim_le");
+    const lblEys = document.getElementById("lbl_sim_eys");
+    const lblMys = document.getElementById("lbl_sim_mys");
+    const lblGni = document.getElementById("lbl_sim_gni");
+
+    const simHdiVal = document.getElementById("sim_hdi_val");
+    const simTierBadge = document.getElementById("sim_tier_badge");
+    const simDeltaVal = document.getElementById("sim_delta_val");
+    const simInterpretation = document.getElementById("sim_interpretation");
+
+    function runSimulation() {
+        let le = parseFloat(elLe.value);
+        let eys = parseFloat(elEys.value);
+        let mys = parseFloat(elMys.value);
+        let gni = parseFloat(elGni.value);
+
+        // Smart constraint: Mean Schooling cannot exceed Expected Schooling
+        if (mys > eys) {
+            eys = mys;
+            elEys.value = eys;
+        }
+
+        // Update slider labels
+        lblLe.innerText = le.toFixed(1);
+        lblEys.innerText = eys.toFixed(1);
+        lblMys.innerText = mys.toFixed(1);
+        lblGni.innerText = Math.round(gni).toLocaleString();
+
+        // Scale inputs
+        const scaledLe = (le - simMeta.means[0]) / simMeta.scales[0];
+        const scaledEys = (eys - simMeta.means[1]) / simMeta.scales[1];
+        const scaledMys = (mys - simMeta.means[2]) / simMeta.scales[2];
+        const scaledGni = (gni - simMeta.means[3]) / simMeta.scales[3];
+
+        // Predict
+        let simHdi = simMeta.intercept + 
+                     (simMeta.coefs[0] * scaledLe) + 
+                     (simMeta.coefs[1] * scaledEys) + 
+                     (simMeta.coefs[2] * scaledMys) + 
+                     (simMeta.coefs[3] * scaledGni);
+
+        // Clamp to [0, 1]
+        simHdi = Math.max(0.0, Math.min(1.0, simHdi));
+
+        // Update score
+        simHdiVal.innerText = simHdi.toFixed(3);
+
+        // Update delta
+        const delta = simHdi - originalHdi;
+        let deltaText = delta.toFixed(3);
+        if (delta > 0.0005) {
+            simDeltaVal.className = "small font-monospace text-success";
+            simDeltaVal.innerHTML = `<i class="fa-solid fa-circle-chevron-up me-1"></i>+${deltaText}`;
+        } else if (delta < -0.0005) {
+            simDeltaVal.className = "small font-monospace text-danger";
+            simDeltaVal.innerHTML = `<i class="fa-solid fa-circle-chevron-down me-1"></i>${deltaText}`;
+        } else {
+            simDeltaVal.className = "small font-monospace text-muted";
+            simDeltaVal.innerHTML = `<i class="fa-solid fa-circle-minus me-1"></i>0.000`;
+        }
+
+        // Determine tier
+        let simTierClass = "low";
+        let simTierName = "Low";
+        if (simHdi >= 0.800) {
+            simTierClass = "very-high";
+            simTierName = "Very High";
+        } else if (simHdi >= 0.700) {
+            simTierClass = "high";
+            simTierName = "High";
+        } else if (simHdi >= 0.550) {
+            simTierClass = "medium";
+            simTierName = "Medium";
+        }
+
+        // Update badge class
+        simTierBadge.className = `badge badge-${simTierClass} px-3 py-2 rounded-pill font-monospace`;
+        simTierBadge.innerText = `${simTierName} Tier`;
+
+        // Update color of score text dynamically
+        simHdiVal.className = `display-5 fw-bold text-${simTierClass} mb-2`;
+
+        // Update Interpretation text
+        let changes = [];
+        if (Math.abs(le - {{ inputs.Life_Expectancy }}) > 0.01) changes.push("health");
+        if (Math.abs(eys - {{ inputs.Expected_Years_Schooling }}) > 0.01 || Math.abs(mys - {{ inputs.Mean_Years_Schooling }}) > 0.01) changes.push("education");
+        if (Math.abs(gni - {{ inputs.GNI_per_Capita }}) > 1.0) changes.push("national income");
+
+        if (changes.length === 0) {
+            simInterpretation.innerText = "Inputs are set to original prediction values. Drag the sliders to run scenarios.";
+        } else {
+            let changeList = changes.join(" and ");
+            let categoryChangeMsg = "";
+            const originalTierName = "{{ tier_name }}";
+            if (simTierName !== originalTierName) {
+                if (delta > 0) {
+                    categoryChangeMsg = ` promoting the country to the <strong>${simTierName}</strong> category!`;
+                } else {
+                    categoryChangeMsg = ` dropping the country to the <strong>${simTierName}</strong> category.`;
+                }
+            } else {
+                categoryChangeMsg = " keeping the country in the same development category tier.";
+            }
+            simInterpretation.innerHTML = `Simulating adjustments in <strong>${changeList}</strong> yields an HDI of <strong>${simHdi.toFixed(3)}</strong> (${delta >= 0 ? '+' : ''}${delta.toFixed(3)} change),${categoryChangeMsg}`;
+        }
+    }
+
+    // Add listeners
+    elLe.addEventListener("input", runSimulation);
+    elEys.addEventListener("input", runSimulation);
+    elMys.addEventListener("input", runSimulation);
+    elGni.addEventListener("input", runSimulation);
+</script>
+{% endblock %}
