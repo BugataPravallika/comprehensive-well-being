@@ -116,7 +116,6 @@ active_env/
 # Project specific
 dataset/*.csv
 models/*.pkl
-static/images/*.png
 *.db
 .DS_Store
 Thumbs.db
