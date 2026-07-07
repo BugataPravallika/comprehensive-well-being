@@ -1,5 +1,9 @@
 # A Comprehensive Measure of Well-Being: Human Development Index (HDI) Prediction System
 
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.x-green.svg)](https://flask.palletsprojects.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 This project is an end-to-end Machine Learning and Data Science implementation that predicts a country's **Human Development Index (HDI)** using major socioeconomic indicators. The system features a robust data generation and processing pipeline, comprehensive Exploratory Data Analysis (EDA) visualizations, a trained Linear Regression model, and a premium interactive Flask web application dashboard.
 
 ---
@@ -244,4 +248,8 @@ Shows stored database queries, sorting and filtering options, purges, and CSV do
 - **Real-Time Client-Side Simulation**: Developed a "What-If" decision-support tool using client-side mathematical projection that allows policy makers to simulate changes in life expectancy, schooling, and national income, generating instant predicted HDI updates and automated policy interpretations.
 - **Robust Storage & Export Architecture**: Implemented a local logging system backed by SQLite for query audits, featuring sorting, filtering, and CSV export. Integrated a customized PDF report compilation engine to generate professional, downloadable summary sheets.
 - **Smart Logic & Controls**: Enforced strict boundary conditions and cross-field domain-specific constraints (e.g. Mean Schooling cannot exceed Expected Schooling) on both client and server sides to secure input integrity.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
