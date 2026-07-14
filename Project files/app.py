@@ -4,12 +4,14 @@ import math
 import json
 import sqlite3
 import datetime
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, make_response, jsonify
 from fpdf import FPDF, XPos, YPos
 
 app = Flask(__name__)
+BASE_DIR = Path(__file__).resolve().parent
 
 # Premium PDF generation class
 class HDIPDF(FPDF):
@@ -31,10 +33,10 @@ class HDIPDF(FPDF):
         self.cell(0, 10, f"Page {self.page_no()} | Generated on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | HDI Prediction System", align="C")
 
 # Paths for serialized models and databases
-MODEL_PATH = os.path.join("models", "hdi_model.pkl")
-SCALER_PATH = os.path.join("models", "scaler.pkl")
-DATASET_PATH = os.path.join("dataset", "hdi_dataset.csv")
-DB_PATH = os.path.join("dataset", "predictions.db")
+MODEL_PATH = BASE_DIR / "models" / "hdi_model.pkl"
+SCALER_PATH = BASE_DIR / "models" / "scaler.pkl"
+DATASET_PATH = BASE_DIR / "dataset" / "hdi_dataset.csv"
+DB_PATH = BASE_DIR / "dataset" / "predictions.db"
 
 # Global variables
 model = None

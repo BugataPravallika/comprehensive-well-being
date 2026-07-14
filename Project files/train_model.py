@@ -1,5 +1,6 @@
 import os
 import pickle
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,6 +9,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+
+BASE_DIR = Path(__file__).resolve().parent
 
 # Set plot style for premium aesthetics
 sns.set_theme(style="whitegrid")
@@ -21,11 +24,16 @@ plt.rcParams.update({
     'figure.dpi': 150
 })
 
-def generate_hdi_dataset(save_path="dataset/hdi_dataset.csv"):
+def generate_hdi_dataset(save_path=None):
     """
     Generates a realistic, statistically coherent dataset of countries with socioeconomic
     indicators and calculates their Human Development Index (HDI) based on the official UNDP formula.
     """
+    if save_path is None:
+        save_path = BASE_DIR / "dataset" / "hdi_dataset.csv"
+    else:
+        save_path = Path(save_path)
+
     np.random.seed(42)
     
     # Define countries across four development tiers to simulate authentic global diversity
@@ -124,11 +132,16 @@ def generate_hdi_dataset(save_path="dataset/hdi_dataset.csv"):
     print(f"[+] Dataset successfully generated and saved to: {save_path}")
     return df
 
-def run_eda(df, output_dir="static/images"):
+def run_eda(df, output_dir=None):
     """
     Performs complete Exploratory Data Analysis (EDA) on the dataset and
     saves high-quality plots to the specified output directory.
     """
+    if output_dir is None:
+        output_dir = BASE_DIR / "static" / "images"
+    else:
+        output_dir = Path(output_dir)
+
     os.makedirs(output_dir, exist_ok=True)
     
     print("\n--- Exploratory Data Analysis Summary ---")
@@ -211,11 +224,16 @@ def run_eda(df, output_dir="static/images"):
     
     print(f"[+] All EDA plots saved successfully to: {output_dir}")
 
-def preprocess_and_train(df, model_dir="models"):
+def preprocess_and_train(df, model_dir=None):
     """
     Processes the data, trains a Linear Regression model, prints metrics,
     and serializes the trained model and scaler to the models directory.
     """
+    if model_dir is None:
+        model_dir = BASE_DIR / "models"
+    else:
+        model_dir = Path(model_dir)
+
     os.makedirs(model_dir, exist_ok=True)
     
     # Define features and target

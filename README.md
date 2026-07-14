@@ -238,17 +238,6 @@ Shows stored database queries, sorting and filtering options, purges, and CSV do
 ![Prediction Logs History](static/images/prediction_history.png)
 
 ---
-
-## Resume-Ready Project Description
-
-**Human Development Index (HDI) Prediction & Socioeconomic Decision-Support System**
-*Full-Stack ML & Decision-Support System | Flask, Python, Scikit-Learn, SQLite, Bootstrap 5*
-- **End-to-End Machine Learning Pipeline**: Built a data processing, scaling (`StandardScaler`), and multiple linear regression model using `scikit-learn` to predict country-level Human Development Index (HDI) scores with an $R^2$ score of **0.979**, explaining 97.9% of global socioeconomic variance.
-- **Interactive Multi-Model Dashboard**: Engineered a responsive glassmorphic dashboard in Flask, featuring dedicated portals for prediction, interactive country comparisons, and full exploratory data analysis (EDA) using programmatically generated seaborn plots alongside dynamic tables.
-- **Real-Time Client-Side Simulation**: Developed a "What-If" decision-support tool using client-side mathematical projection that allows policy makers to simulate changes in life expectancy, schooling, and national income, generating instant predicted HDI updates and automated policy interpretations.
-- **Robust Storage & Export Architecture**: Implemented a local logging system backed by SQLite for query audits, featuring sorting, filtering, and CSV export. Integrated a customized PDF report compilation engine to generate professional, downloadable summary sheets.
-- **Smart Logic & Controls**: Enforced strict boundary conditions and cross-field domain-specific constraints (e.g. Mean Schooling cannot exceed Expected Schooling) on both client and server sides to secure input integrity.
-
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

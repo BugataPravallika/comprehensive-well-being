@@ -38,6 +38,210 @@ function activateTabFromHash(hash) {
 
 document.addEventListener('DOMContentLoaded', function () {
     activateTabFromHash(window.location.hash.replace('#', ''));
+
+    // Country profiles data passed from Flask
+    const countryData = {{ countries_json | safe }};
+
+    const countrySelector = document.getElementById("country_selector");
+    if (countrySelector) {
+        countrySelector.addEventListener("change", function () {
+            const country = this.value;
+            if (country && countryData[country]) {
+                const data = countryData[country];
+                document.getElementById("Life_Expectancy").value = data.Life_Expectancy;
+                document.getElementById("Expected_Years_Schooling").value = data.Expected_Years_Schooling;
+                document.getElementById("Mean_Years_Schooling").value = data.Mean_Years_Schooling;
+                document.getElementById("GNI_per_Capita").value = data.GNI_per_Capita;
+            }
+        });
+    }
+
+    // Chart.js instances placeholder
+    let yearsChartInstance = null;
+    let incomeChartInstance = null;
+
+    const compareButton = document.getElementById("compare_btn");
+    if (compareButton) {
+        compareButton.addEventListener("click", function () {
+            const countryA = document.getElementById("compare_a").value;
+            const countryB = document.getElementById("compare_b").value;
+
+            if (!countryA || !countryB) {
+                alert("Please select both Country A and Country B to compare.");
+                return;
+            }
+
+            if (countryA === countryB) {
+                alert("Please select two different countries for comparison.");
+                return;
+            }
+
+            const dataA = countryData[countryA];
+            const dataB = countryData[countryB];
+
+            if (!dataA || !dataB) {
+                alert("Error loading country data records.");
+                return;
+            }
+
+            document.getElementById("lbl_country_a").innerText = countryA;
+            document.getElementById("lbl_country_b").innerText = countryB;
+            document.getElementById("comparison_report").classList.remove("d-none");
+
+            const setCell = (cellId, valA, valB, isCurrency = false) => {
+                const el = document.getElementById(cellId);
+                const delta = valA - valB;
+
+                let prettyA = isCurrency ? `$${valA.toLocaleString()}` : valA.toFixed(2);
+                let prettyB = isCurrency ? `$${valB.toLocaleString()}` : valB.toFixed(2);
+
+                document.getElementById(`${cellId}_a`).innerText = prettyA;
+                document.getElementById(`${cellId}_b`).innerText = prettyB;
+
+                let deltaPretty = isCurrency ? `$${Math.abs(delta).toLocaleString()}` : Math.abs(delta).toFixed(2);
+                if (delta > 0) {
+                    el.innerHTML = `<span class="text-success"><i class="fa-solid fa-circle-chevron-up me-1"></i>+${deltaPretty}</span>`;
+                } else if (delta < 0) {
+                    el.innerHTML = `<span class="text-danger"><i class="fa-solid fa-circle-chevron-down me-1"></i>-${deltaPretty}</span>`;
+                } else {
+                    el.innerHTML = `<span class="text-muted"><i class="fa-solid fa-circle-minus me-1"></i>0.00</span>`;
+                }
+            };
+
+            setCell("val_hdi", dataA.HDI, dataB.HDI);
+            setCell("val_le", dataA.Life_Expectancy, dataB.Life_Expectancy);
+            setCell("val_eys", dataA.Expected_Years_Schooling, dataB.Expected_Years_Schooling);
+            setCell("val_mys", dataA.Mean_Years_Schooling, dataB.Mean_Years_Schooling);
+            setCell("val_gni", dataA.GNI_per_Capita, dataB.GNI_per_Capita, true);
+
+            renderCharts(countryA, countryB, dataA, dataB);
+            document.getElementById("comparison_report").scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+
+    function renderCharts(countryA, countryB, dataA, dataB) {
+        if (yearsChartInstance) yearsChartInstance.destroy();
+        if (incomeChartInstance) incomeChartInstance.destroy();
+
+        const ctxYears = document.getElementById('yearsComparisonChart').getContext('2d');
+        yearsChartInstance = new Chart(ctxYears, {
+            type: 'bar',
+            data: {
+                labels: ['Life Expectancy (Scaled 1/5)', 'Expected Schooling (yrs)', 'Mean Schooling (yrs)', 'HDI Score (Scaled x20)'],
+                datasets: [
+                    {
+                        label: countryA,
+                        data: [dataA.Life_Expectancy / 5, dataA.Expected_Years_Schooling, dataA.Mean_Years_Schooling, dataA.HDI * 20],
+                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                        borderColor: 'rgb(99, 102, 241)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: countryB,
+                        data: [dataB.Life_Expectancy / 5, dataB.Expected_Years_Schooling, dataB.Mean_Years_Schooling, dataB.HDI * 20],
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                        borderColor: 'rgb(245, 158, 11)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8' } }
+                },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+
+        const ctxIncome = document.getElementById('incomeComparisonChart').getContext('2d');
+        incomeChartInstance = new Chart(ctxIncome, {
+            type: 'bar',
+            data: {
+                labels: ['GNI per Capita (PPP $)'],
+                datasets: [
+                    {
+                        label: countryA,
+                        data: [dataA.GNI_per_Capita],
+                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                        borderColor: 'rgb(99, 102, 241)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: countryB,
+                        data: [dataB.GNI_per_Capita],
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                        borderColor: 'rgb(245, 158, 11)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                }
+            }
+        });
+    }
+
+    (function () {
+        'use strict';
+
+        const expSchoolInput = document.getElementById("Expected_Years_Schooling");
+        const meanSchoolInput = document.getElementById("Mean_Years_Schooling");
+        const expFeedback = document.getElementById("expected_schooling_feedback");
+        const meanFeedback = document.getElementById("mean_schooling_feedback");
+
+        function checkSchoolingConstraints() {
+            if (!expSchoolInput || !meanSchoolInput) return;
+
+            const expVal = parseFloat(expSchoolInput.value);
+            const meanVal = parseFloat(meanSchoolInput.value);
+
+            if (!isNaN(expVal) && !isNaN(meanVal) && meanVal > expVal) {
+                meanSchoolInput.setCustomValidity("Mean schooling years cannot exceed expected schooling years.");
+                if (meanFeedback) {
+                    meanFeedback.innerText = "Mean schooling years cannot exceed Expected Schooling (" + expVal + " yrs).";
+                }
+            } else {
+                meanSchoolInput.setCustomValidity("");
+                if (meanFeedback) {
+                    meanFeedback.innerText = "Please enter a value between 1.0 and 15.0.";
+                }
+            }
+        }
+
+        if (expSchoolInput) {
+            expSchoolInput.addEventListener('input', checkSchoolingConstraints);
+        }
+        if (meanSchoolInput) {
+            meanSchoolInput.addEventListener('input', checkSchoolingConstraints);
+        }
+
+        const forms = document.querySelectorAll('.needs-validation');
+        Array.prototype.slice.call(forms).forEach(function (formElement) {
+            formElement.addEventListener('submit', function (event) {
+                checkSchoolingConstraints();
+
+                if (!formElement.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                formElement.classList.add('was-validated');
+            }, false);
+        });
+    })();
 });
 
 window.addEventListener('hashchange', function () {
@@ -513,222 +717,4 @@ window.addEventListener('hashchange', function () {
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<!-- Country Autofill & Comparison Javascript Block -->
-<script>
-    // Country profiles data passed from Flask
-    const countryData = {{ countries_json | safe }};
-
-    // Auto-fill Selector Handler
-    document.getElementById("country_selector").addEventListener("change", function() {
-        const country = this.value;
-        if (country && countryData[country]) {
-            const data = countryData[country];
-            document.getElementById("Life_Expectancy").value = data.Life_Expectancy;
-            document.getElementById("Expected_Years_Schooling").value = data.Expected_Years_Schooling;
-            document.getElementById("Mean_Years_Schooling").value = data.Mean_Years_Schooling;
-            document.getElementById("GNI_per_Capita").value = data.GNI_per_Capita;
-        }
-    });
-
-    // Chart.js instances placeholder
-    let yearsChartInstance = null;
-    let incomeChartInstance = null;
-
-    // Comparison click handler
-    document.getElementById("compare_btn").addEventListener("click", function() {
-        const countryA = document.getElementById("compare_a").value;
-        const countryB = document.getElementById("compare_b").value;
-
-        if (!countryA || !countryB) {
-            alert("Please select both Country A and Country B to compare.");
-            return;
-        }
-
-        if (countryA === countryB) {
-            alert("Please select two different countries for comparison.");
-            return;
-        }
-
-        const dataA = countryData[countryA];
-        const dataB = countryData[countryB];
-
-        if (!dataA || !dataB) {
-            alert("Error loading country data records.");
-            return;
-        }
-
-        // Show comparison panel
-        document.getElementById("lbl_country_a").innerText = countryA;
-        document.getElementById("lbl_country_b").innerText = countryB;
-        document.getElementById("comparison_report").classList.remove("d-none");
-
-        // Helper to compute delta
-        const setCell = (cellId, valA, valB, isCurrency=false) => {
-            const el = document.getElementById(cellId);
-            const delta = valA - valB;
-            
-            let prettyA = isCurrency ? `$${valA.toLocaleString()}` : valA.toFixed(2);
-            let prettyB = isCurrency ? `$${valB.toLocaleString()}` : valB.toFixed(2);
-            
-            document.getElementById(`${cellId}_a`).innerText = prettyA;
-            document.getElementById(`${cellId}_b`).innerText = prettyB;
-
-            let deltaPretty = isCurrency ? `$${Math.abs(delta).toLocaleString()}` : Math.abs(delta).toFixed(2);
-            if (delta > 0) {
-                el.innerHTML = `<span class="text-success"><i class="fa-solid fa-circle-chevron-up me-1"></i>+${deltaPretty}</span>`;
-            } else if (delta < 0) {
-                el.innerHTML = `<span class="text-danger"><i class="fa-solid fa-circle-chevron-down me-1"></i>-${deltaPretty}</span>`;
-            } else {
-                el.innerHTML = `<span class="text-muted"><i class="fa-solid fa-circle-minus me-1"></i>0.00</span>`;
-            }
-        };
-
-        // Populate Table cells
-        setCell("val_hdi", dataA.HDI, dataB.HDI);
-        setCell("val_le", dataA.Life_Expectancy, dataB.Life_Expectancy);
-        setCell("val_eys", dataA.Expected_Years_Schooling, dataB.Expected_Years_Schooling);
-        setCell("val_mys", dataA.Mean_Years_Schooling, dataB.Mean_Years_Schooling);
-        setCell("val_gni", dataA.GNI_per_Capita, dataB.GNI_per_Capita, true);
-
-        // Render comparative bar charts
-        renderCharts(countryA, countryB, dataA, dataB);
-        
-        // Smooth scroll to comparison report
-        document.getElementById("comparison_report").scrollIntoView({ behavior: 'smooth' });
-    });
-
-    function renderCharts(countryA, countryB, dataA, dataB) {
-        // Destroy existing instances if any
-        if (yearsChartInstance) yearsChartInstance.destroy();
-        if (incomeChartInstance) incomeChartInstance.destroy();
-
-        // 1. Years Indicators Chart
-        const ctxYears = document.getElementById('yearsComparisonChart').getContext('2d');
-        yearsChartInstance = new Chart(ctxYears, {
-            type: 'bar',
-            data: {
-                labels: ['Life Expectancy (Scaled 1/5)', 'Expected Schooling (yrs)', 'Mean Schooling (yrs)', 'HDI Score (Scaled x20)'],
-                datasets: [
-                    {
-                        label: countryA,
-                        data: [dataA.Life_Expectancy / 5, dataA.Expected_Years_Schooling, dataA.Mean_Years_Schooling, dataA.HDI * 20],
-                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
-                        borderColor: 'rgb(99, 102, 241)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: countryB,
-                        data: [dataB.Life_Expectancy / 5, dataB.Expected_Years_Schooling, dataB.Mean_Years_Schooling, dataB.HDI * 20],
-                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
-                        borderColor: 'rgb(245, 158, 11)',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { labels: { color: '#94a3b8' } }
-                },
-                scales: {
-                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
-                }
-            }
-        });
-
-        // 2. GNI Comparison Chart
-        const ctxIncome = document.getElementById('incomeComparisonChart').getContext('2d');
-        incomeChartInstance = new Chart(ctxIncome, {
-            type: 'bar',
-            data: {
-                labels: ['GNI per Capita (PPP $)'],
-                datasets: [
-                    {
-                        label: countryA,
-                        data: [dataA.GNI_per_Capita],
-                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
-                        borderColor: 'rgb(99, 102, 241)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: countryB,
-                        data: [dataB.GNI_per_Capita],
-                        backgroundColor: 'rgba(245, 158, 11, 0.7)',
-                        borderColor: 'rgb(245, 158, 11)',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
-                }
-            }
-        });
-    }
-
-    // Bootstrap client-side form validation & smart validation
-    (function () {
-        'use strict'
-        
-        const expSchoolInput = document.getElementById("Expected_Years_Schooling");
-        const meanSchoolInput = document.getElementById("Mean_Years_Schooling");
-        const expFeedback = document.getElementById("expected_schooling_feedback");
-        const meanFeedback = document.getElementById("mean_schooling_feedback");
-
-        function checkSchoolingConstraints() {
-            if (!expSchoolInput || !meanSchoolInput) return;
-            
-            const expVal = parseFloat(expSchoolInput.value);
-            const meanVal = parseFloat(meanSchoolInput.value);
-
-            // Check if Mean exceeds Expected
-            if (!isNaN(expVal) && !isNaN(meanVal) && meanVal > expVal) {
-                meanSchoolInput.setCustomValidity("Mean schooling years cannot exceed expected schooling years.");
-                if (meanFeedback) {
-                    meanFeedback.innerText = "Mean schooling years cannot exceed Expected Schooling (" + expVal + " yrs).";
-                }
-            } else {
-                meanSchoolInput.setCustomValidity("");
-                if (meanFeedback) {
-                    meanFeedback.innerText = "Please enter a value between 1.0 and 15.0.";
-                }
-            }
-        }
-
-        // Run validation dynamically on input changes
-        if (expSchoolInput) {
-            expSchoolInput.addEventListener('input', checkSchoolingConstraints);
-        }
-        if (meanSchoolInput) {
-            meanSchoolInput.addEventListener('input', checkSchoolingConstraints);
-        }
-
-        var forms = document.querySelectorAll('.needs-validation')
-        Array.prototype.slice.call(forms)
-            .forEach(function (formElement) {
-                formElement.addEventListener('submit', function (event) {
-                    checkSchoolingConstraints();
-                    
-                    if (!formElement.checkValidity()) {
-                        event.preventDefault()
-                        event.stopPropagation()
-                    }
-                    formElement.classList.add('was-validated')
-                }, false)
-            })
-    })()
-</script>
 {% endblock %}
