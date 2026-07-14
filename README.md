@@ -137,23 +137,23 @@ After running `train_model.py`, the following metrics are obtained:
 
 ### 1. Correlation Matrix Heatmap
 Shows the linear associations between features and the target HDI index.
-![Correlation Heatmap](static/images/correlation_heatmap.png)
+![Correlation Heatmap](Project%20files/static/images/correlation_heatmap.png)
 
 ### 2. Feature Distributions
 Visualizes the shape, skewness, and variance of each indicator.
-![Feature Distributions](static/images/distribution_plots.png)
+![Feature Distributions](Project%20files/static/images/distribution_plots.png)
 
 ### 3. Socioeconomic Predictors vs HDI
 Plots each indicator against HDI with a regression line fit. Note the logarithmic trend of GNI.
-![Scatter Plots](static/images/scatter_plots.png)
+![Scatter Plots](Project%20files/static/images/scatter_plots.png)
 
 ### 4. Boxplots across Development Tiers
 Displays HDI ranges categorized by their developmental classifications.
-![Development Tiers Boxplots](static/images/boxplots.png)
+![Development Tiers Boxplots](Project%20files/static/images/boxplots.png)
 
 ### 5. Pairplots of Indicator Relations
 Displays full scatter and KDE joint distribution matrix colored by tier.
-![Pairwise Relationships Matrix](static/images/pairplots.png)
+![Pairwise Relationships Matrix](Project%20files/static/images/pairplots.png)
 
 ---
 
@@ -223,19 +223,19 @@ Below are screenshots demonstrating the responsive, premium glassmorphic interfa
 
 ### 1. Dashboard Home & Inputs Portal
 Displays the primary prediction interface with country autofill selection and input validation.
-![Dashboard Home & Inputs Portal](static/images/dashboard_home.png)
+![Dashboard Home & Inputs Portal](Project%20files/static/images/dashboard_home.png)
 
 ### 2. Prediction Result, Gauge, & Policy Recommendations
 Shows the prediction response, development classification badge, interactive circular gauge, and targeted intervention cards.
-![Prediction Result & Recommendations](static/images/prediction_result.png)
+![Prediction Result & Recommendations](Project%20files/static/images/prediction_result.png)
 
 ### 3. Country Side-by-Side Comparison Dashboard
 Illustrates dynamic indicator comparisons, differences, and visual metric bar charts.
-![Country Comparison Dashboard](static/images/country_comparison.png)
+![Country Comparison Dashboard](Project%20files/static/images/country_comparison.png)
 
 ### 4. Prediction Logs History Audit Trail
 Shows stored database queries, sorting and filtering options, purges, and CSV download links.
-![Prediction Logs History](static/images/prediction_history.png)
+![Prediction Logs History](Project%20files/static/images/prediction_history.png)
 
 ---
 ## License
