@@ -119,3 +119,7 @@ models/*.pkl
 *.db
 .DS_Store
 Thumbs.db
+
+# Large local media files
+Video Demo/
+
